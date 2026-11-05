@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniGuide LPU - Smart Campus AI Assistant</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            lpu: {
+              orange: '#F15A24',
+              darkorange: '#C8400E',
+              navy: '#0C1B33',
+              slate: '#1E293B',
+              amber: '#F59E0B',
+              teal: '#0D9488'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.5);
+      border-radius: 9999px;
+    }
+    .leaflet-popup-content-wrapper {
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+      font-family: 'Inter', sans-serif;
+    }
+    .glassmorphism {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .glassmorphism-dark {
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-orange-500 selection:text-white">
+
+  <!-- ================= TOP NOTIFICATION / VERIFICATION BANNER ================= -->
+  <div class="bg-gradient-to-r from-lpu-navy via-slate-900 to-lpu-darkorange text-white text-xs px-4 py-2 flex items-center justify-between border-b border-orange-500/30">
+    <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+        <i data-lucide="shield-check" class="w-3 h-3 mr-1"></i> Public LPU Knowledge System
+      </span>
+      <span class="text-slate-300">| Lovely Professional University Hackathon Prototype • Includes Academic, RMS, Navigation & Hostels guide</span>
+    </div>
+    <div class="hidden sm:flex items-center gap-3">
+      <span class="inline-flex items-center text-[11px] text-orange-200">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span> Systems Online
+      </span>
+      <span class="text-slate-400">•</span>
+      <span class="text-[11px] text-slate-300 font-mono">Session: Spring 2025</span>
+    </div>
+  </div>
+
+  <!-- ================= MAIN NAVIGATION HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Branding -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-lpu-orange to-red-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+            <i data-lucide="compass" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-lg text-slate-900 tracking-tight">UniGuide <span class="text-lpu-orange">LPU</span></span>
+              <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-orange-100 text-lpu-orange uppercase tracking-wider">AI 2.0</span>
+            </div>
+            <p class="text-[11px] text-slate-500 leading-none">Smart Campus Assistant & Student Hub</p>
+          </div>
+        </div>
+
+        <!-- Center Nav Tabs (Desktop) -->
+        <nav class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Dashboard
+          </button>
+          <button onclick="switchTab('academics')" id="nav-academics" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5">
+            <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Academics & CAs
+          </button>
+          <button onclick="switchTab('map')" id="nav-map" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Campus GPS
+          </button>
+          <button onclick="switchTab('ums-rms')" id="nav-ums-rms" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5">
+            <i data-lucide="ticket" class="w-3.5 h-3.5"></i> UMS / RMS Help
+          </button>
+          <button onclick="switchTab('facilities')" id="nav-facilities" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5">
+            <i data-lucide="building-2" class="w-3.5 h-3.5"></i> UniMall & Living
+          </button>
+          <button onclick="switchTab('admin')" id="nav-admin" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-900 transition flex items-center gap-1.5">
+            <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Admin
+          </button>
+        </nav>
+
+        <!-- Right Side: User profile & AI drawer trigger -->
+        <div class="flex items-center gap-2">
+          
+          <!-- AI Chat Assistant Trigger Button -->
+          <button onclick="toggleChatDrawer(true)" class="relative flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-lpu-orange text-white text-xs font-semibold shadow hover:brightness-105 active:scale-95 transition">
+            <i data-lucide="bot" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Ask Campus AI</span>
+            <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+          </button>
+
+          <!-- User Role & Profile Switcher Dropdown Trigger -->
+          <div class="relative">
+            <button onclick="toggleUserDropdown()" id="user-badge" class="flex items-center gap-2 p-1.5 pl-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 transition text-left">
+              <div class="w-7 h-7 rounded-lg bg-orange-600/10 border border-orange-500/30 flex items-center justify-center text-lpu-orange font-bold text-xs">
+                <span id="user-avatar-text">ST</span>
+              </div>
+              <div class="hidden lg:block text-left pr-1">
+                <p id="user-display-name" class="text-xs font-semibold text-slate-800 leading-tight">Aarav Sharma</p>
+                <p id="user-display-reg" class="text-[10px] text-slate-500 font-mono leading-none">Reg: 12104589</p>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 mr-1"></i>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div id="user-dropdown-menu" class="hidden absolute right-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-2xl p-3 z-50">
+              <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                <div>
+                  <p class="text-xs font-bold text-slate-900">Demo Persona Switcher</p>
+                  <p class="text-[11px] text-slate-500">Select active role to preview access</p>
+                </div>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 font-semibold border border-orange-200">Prototype</span>
+              </div>
+
+              <div class="space-y-1.5">
+                <button onclick="switchRole('student')" class="w-full text-left p-2 rounded-xl hover:bg-orange-50/60 flex items-center justify-between group transition">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">ST</div>
+                    <div>
+                      <p class="text-xs font-semibold text-slate-800">Aarav Sharma (B.Tech CSE)</p>
+                      <p class="text-[10px] text-slate-500 font-mono">Reg ID: 12104589 | Hosteler (BH-4)</p>
+                    </div>
+                  </div>
+                  <i data-lucide="check" id="check-student" class="w-4 h-4 text-orange-600"></i>
+                </button>
+
+                <button onclick="switchRole('faculty')" class="w-full text-left p-2 rounded-xl hover:bg-orange-50/60 flex items-center justify-between group transition">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">FC</div>
+                    <div>
+                      <p class="text-xs font-semibold text-slate-800">Dr. Rohit K. (Associate Prof)</p>
+                      <p class="text-[10px] text-slate-500 font-mono">UID: 24901 | Cabin: 34-402A</p>
+                    </div>
+                  </div>
+                  <i data-lucide="check" id="check-faculty" class="w-4 h-4 text-orange-600 hidden"></i>
+                </button>
+
+                <button onclick="switchRole('admin')" class="w-full text-left p-2 rounded-xl hover:bg-orange-50/60 flex items-center justify-between group transition">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">AD</div>
+                    <div>
+                      <p class="text-xs font-semibold text-slate-800">Campus Admin / Registrar</p>
+                      <p class="text-[10px] text-slate-500 font-mono">Admin UID: 100092</p>
+                    </div>
+                  </div>
+                  <i data-lucide="check" id="check-admin" class="w-4 h-4 text-orange-600 hidden"></i>
+                </button>
+              </div>
+
+              <div class="mt-3 pt-2 border-t border-slate-100 text-center">
+                <button onclick="openLoginModal()" class="w-full py-1.5 px-3 rounded-lg border border-dashed border-slate-300 text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:border-slate-400 transition">
+                  Enter Custom Reg ID / Password
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Hamburger -->
+          <button onclick="toggleMobileNav()" class="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-nav-menu" class="hidden md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-1">
+      <button onclick="switchTab('dashboard'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 flex items-center gap-2">
+        <i data-lucide="layout-grid" class="w-4 h-4"></i> Dashboard
+      </button>
+      <button onclick="switchTab('academics'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 flex items-center gap-2">
+        <i data-lucide="graduation-cap" class="w-4 h-4"></i> Academics, Credits & CAs
+      </button>
+      <button onclick="switchTab('map'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 flex items-center gap-2">
+        <i data-lucide="map-pin" class="w-4 h-4"></i> Campus Navigation GPS
+      </button>
+      <button onclick="switchTab('ums-rms'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 flex items-center gap-2">
+        <i data-lucide="ticket" class="w-4 h-4"></i> UMS & RMS Ticket Help
+      </button>
+      <button onclick="switchTab('facilities'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 flex items-center gap-2">
+        <i data-lucide="building-2" class="w-4 h-4"></i> UniMall, Hostels & Gym
+      </button>
+      <button onclick="switchTab('admin'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 flex items-center gap-2">
+        <i data-lucide="sliders" class="w-4 h-4"></i> Prototype Admin Panel
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      
+      <!-- Welcome Hero Banner -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-lpu-navy to-slate-900 text-white p-6 sm:p-8 shadow-xl border border-slate-800">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-orange-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute right-20 -top-10 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-2xl">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-500/20 text-orange-300 border border-orange-500/30 flex items-center gap-1">
+              <i data-lucide="sparkles" class="w-3 h-3"></i> LPU AI Campus Assistant 2025
+            </span>
+            <span class="text-xs text-slate-400">Lovely Professional University</span>
+          </div>
+
+          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
+            Welcome, <span id="hero-user-name" class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">Aarav</span>
+          </h1>
+          <p class="text-sm sm:text-base text-slate-300 mb-6 leading-relaxed">
+            Instant help for classroom navigation, MTE/ETE credit schemas, Continuous Assessment (CA) rules, UniMall directories, hostel out-pass timings, and UMS/RMS grievance filing.
+          </p>
+
+          <!-- Quick AI Prompt Search Bar -->
+          <div class="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 shadow-lg flex items-center gap-2">
+            <i data-lucide="search" class="w-5 h-5 text-slate-400 ml-3"></i>
+            <input type="text" id="quick-ai-input" placeholder="Ask e.g., 'How are CAs calculated?', 'Where is Block 34?', 'Hostel leave timing'..." class="bg-transparent text-white placeholder-slate-400 text-sm focus:outline-none flex-1 px-1">
+            <button onclick="handleQuickSearch()" class="px-4 py-2 rounded-xl bg-lpu-orange text-white text-xs font-semibold hover:bg-orange-600 transition flex items-center gap-1.5 shadow">
+              <span>Ask AI</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <!-- Suggested Chips -->
+          <div class="flex flex-wrap gap-2 mt-4 items-center">
+            <span class="text-[11px] text-slate-400 font-medium">Quick suggestions:</span>
+            <button onclick="askBotDirect('How are CA marks calculated in LPU?')" class="text-[11px] bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1 rounded-lg text-slate-200 transition">
+              CA 3-out-of-4 rule
+            </button>
+            <button onclick="askBotDirect('How to raise an RMS in UMS?')" class="text-[11px] bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1 rounded-lg text-slate-200 transition">
+              Lodge RMS Guide
+            </button>
+            <button onclick="askBotDirect('Hostel out-pass timings and curfew')" class="text-[11px] bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1 rounded-lg text-slate-200 transition">
+              Hostel Leave Timings
+            </button>
+            <button onclick="askBotDirect('Where are ATMs located on campus?')" class="text-[11px] bg-white/10 hover:bg-white/20 border border-white/10 px-2.5 py-1 rounded-lg text-slate-200 transition">
+              Campus ATMs
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Campus Notice Strip -->
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-amber-200/60 text-amber-800">
+            <i data-lucide="bell-ring" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded">Important Notice</span>
+              <span class="text-xs text-amber-700 font-medium">Spring Term 2025</span>
+            </div>
+            <p class="text-xs font-semibold mt-0.5">Upcoming Mid-Term Examinations (MTE) Start: March 18, 2025 • CA-3 Submission Due: March 5</p>
+          </div>
+        </div>
+        <button onclick="switchTab('academics')" class="text-xs font-bold text-amber-900 hover:text-orange-700 underline underline-offset-2 whitespace-nowrap self-end sm:self-center">
+          View Academic Pattern &rarr;
+        </button>
+      </div>
+
+      <!-- Quick Action Modules Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Module 1: Academics -->
+        <div onclick="switchTab('academics')" class="cursor-pointer group p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">Curriculum</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-sm group-hover:text-lpu-orange transition">Subjects & Exam Schema</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">CSE101, ECE205 credit weights, MTE (20-30%) vs ETE (40-50%) guidelines and CA criteria.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-blue-600">
+            <span>Explore subjects</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+          </div>
+        </div>
+
+        <!-- Module 2: GPS & Directions -->
+        <div onclick="switchTab('map')" class="cursor-pointer group p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <i data-lucide="map" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">600+ Acres</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-sm group-hover:text-lpu-orange transition">Campus GPS & Buildings</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">Find Block 32 to 38, UniMall, Central Library, ATMs, Hospital and faculty cabin paths.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-teal-600">
+            <span>Open live map</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+          </div>
+        </div>
+
+        <!-- Module 3: UMS & RMS -->
+        <div onclick="switchTab('ums-rms')" class="cursor-pointer group p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <i data-lucide="headset" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">RMS Help</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-sm group-hover:text-lpu-orange transition">UMS Portal & Grievances</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">Step-by-step interactive walkthrough to file an RMS request, fee clearance & attendance issues.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-purple-600">
+            <span>RMS Step-by-Step</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+          </div>
+        </div>
+
+        <!-- Module 4: Facilities & UniMall -->
+        <div onclick="switchTab('facilities')" class="cursor-pointer group p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200">UniMall & Gym</span>
+            </div>
+            <h3 class="font-bold text-slate-800 text-sm group-hover:text-lpu-orange transition">Campus Life & Hostels</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">UniMall shops directory, food court hours, hostel out-pass rules, gym slots & hospital info.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-orange-600">
+            <span>Explore directory</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dual Info Cards: Fast Lookups -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Academic Policy Overview -->
+        <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-orange-100 text-lpu-orange flex items-center justify-center">
+                <i data-lucide="help-circle" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h2 class="font-bold text-slate-900 text-base">Key Academic Policies (LPU Verified Standard)</h2>
+                <p class="text-xs text-slate-500">Standard evaluation weights and criteria</p>
+              </div>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 text-[10px] rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+              Verified Public Info
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- CA Rule Card -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-orange-600">Continuous Assessment</span>
+              <h4 class="font-bold text-slate-800 text-sm mt-1">Best 3 of 4 CAs</h4>
+              <p class="text-xs text-slate-500 mt-1">Most courses conduct 4 CAs (test, assignments, presentations). Only the highest 3 scores are counted towards the final grade.</p>
+              <div class="mt-2 text-[11px] font-semibold text-slate-700">Weightage: ~25% to 30%</div>
+            </div>
+
+            <!-- MTE Card -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600">Mid-Term Exam</span>
+              <h4 class="font-bold text-slate-800 text-sm mt-1">MTE (50 Marks)</h4>
+              <p class="text-xs text-slate-500 mt-1">Covers ~50% of the syllabus (Units 1-3). Duration 90-120 minutes. Scaled to course weightage in UMS.</p>
+              <div class="mt-2 text-[11px] font-semibold text-slate-700">Weightage: ~20% to 25%</div>
+            </div>
+
+            <!-- ETE Card -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-purple-600">End-Term Exam</span>
+              <h4 class="font-bold text-slate-800 text-sm mt-1">ETE (100 Marks)</h4>
+              <p class="text-xs text-slate-500 mt-1">Comprehensive test covering all 6 units. Duration 3 hours. Compulsory attendance required (&ge;75%).</p>
+              <div class="mt-2 text-[11px] font-semibold text-slate-700">Weightage: ~45% to 50%</div>
+            </div>
+          </div>
+
+          <!-- Bottom Notice -->
+          <div class="mt-4 p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center justify-between text-xs text-blue-800">
+            <div class="flex items-center gap-2">
+              <i data-lucide="info" class="w-4 h-4 text-blue-600 flex-shrink-0"></i>
+              <span>Need official clarification for your specific course code? Raise an RMS under <strong>Academic Issues</strong>.</span>
+            </div>
+            <button onclick="switchTab('ums-rms')" class="font-bold underline whitespace-nowrap ml-2">How to file RMS</button>
+          </div>
+        </div>
+
+        <!-- Right: Important Deadlines & Contacts -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                  <i data-lucide="clock" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900 text-sm">Critical Dates & Deadlines</h3>
+                  <p class="text-[11px] text-slate-500">Academic & Financial Calendar</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-600">Spring '25</span>
+            </div>
+
+            <div class="space-y-3">
+              <div class="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-semibold text-slate-800">Term Fee Installment Deadline</p>
+                  <p class="text-[11px] text-slate-500">Pay via UMS &gt; Fee Portal before late fee fine applies (₹100/day).</p>
+                  <span class="inline-block mt-1 text-[10px] font-mono font-bold text-red-600">Deadline: March 10, 2025</span>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="w-2 h-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-semibold text-slate-800">CA-3 Submission / Presentation</p>
+                  <p class="text-[11px] text-slate-500">Check OAS / LMS for course code upload links.</p>
+                  <span class="inline-block mt-1 text-[10px] font-mono font-bold text-orange-600">Due: March 5, 2025</span>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
+                <div>
+                  <p class="text-xs font-semibold text-slate-800">Hostel Leave (Holi Break)</p>
+                  <p class="text-[11px] text-slate-500">Apply via UMS Hostel Management 48h prior.</p>
+                  <span class="inline-block mt-1 text-[10px] font-mono font-bold text-emerald-600">Portal Open: March 12</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Helpline: <strong>+91-1824-517000</strong></span>
+            <button onclick="switchTab('facilities')" class="text-orange-600 font-semibold hover:underline">Hostel Rules &rarr;</button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 2: ACADEMICS & CA EXPLAINER -->
+    <section id="tab-academics" class="tab-content hidden space-y-6">
+      
+      <!-- Academic Header -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-slate-900">Academic Curriculum & Evaluation System</h2>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">LPU Guidelines</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">Course credit structures, MTE & ETE pattern breakdown, and Continuous Assessment scoring.</p>
+        </div>
+        
+        <!-- Filter courses -->
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-semibold text-slate-600">Filter Department:</label>
+          <select id="course-dept-filter" onchange="filterCourses()" class="text-xs bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500">
+            <option value="all">All Departments</option>
+            <option value="CSE">Computer Science (CSE)</option>
+            <option value="ECE">Electronics (ECE)</option>
+            <option value="MEC">Mechanical (MEC)</option>
+            <option value="MGT">Management (MBA/BBA)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Evaluation Schemes Comparison -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="bg-gradient-to-br from-amber-50 to-orange-50/40 p-5 rounded-2xl border border-orange-200">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-bold text-slate-800 text-sm">Continuous Assessment (CA)</h4>
+            <span class="text-xs font-bold text-orange-600">25 - 30% Marks</span>
+          </div>
+          <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+            <li><strong>Format:</strong> 4 evaluations conducted per course during semester.</li>
+            <li><strong>Calculation Policy:</strong> <em>Best 3 out of 4</em> scores are selected automatically.</li>
+            <li><strong>Component Types:</strong> MCQ test on LMS, coding task, term paper, group presentation, or lab performance.</li>
+            <li><strong>Missed CA:</strong> No re-tests are typically scheduled except under genuine verified medical leave approved by HOS.</li>
+          </ul>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50/40 p-5 rounded-2xl border border-blue-200">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-bold text-slate-800 text-sm">Mid-Term Examination (MTE)</h4>
+            <span class="text-xs font-bold text-blue-600">20 - 25% Marks</span>
+          </div>
+          <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+            <li><strong>Timing:</strong> Mid-semester (approx 7-8 weeks from term start).</li>
+            <li><strong>Syllabus:</strong> Units 1 to 3 (50% coverage).</li>
+            <li><strong>Total Marks:</strong> 50 Marks (scaled down proportionally in UMS).</li>
+            <li><strong>Pattern:</strong> Section A (Objective/Short answer) + Section B (Analytical / Descriptive 5 & 10 markers).</li>
+            <li><strong>Seating:</strong> Seating plan is published in UMS 2 days prior.</li>
+          </ul>
+        </div>
+
+        <div class="bg-gradient-to-br from-emerald-50 to-teal-50/40 p-5 rounded-2xl border border-emerald-200">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-bold text-slate-800 text-sm">End-Term Examination (ETE)</h4>
+            <span class="text-xs font-bold text-emerald-600">45 - 50% Marks</span>
+          </div>
+          <ul class="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+            <li><strong>Timing:</strong> End of semester (May for Spring, Dec for Autumn).</li>
+            <li><strong>Syllabus:</strong> Full syllabus (Units 1 to 6).</li>
+            <li><strong>Total Marks:</strong> 100 Marks (3 Hours duration).</li>
+            <li><strong>Prerequisite:</strong> Minimum 75% attendance mandatory to generate Admit Card in UMS.</li>
+            <li><strong>Backlog / Re-appear:</strong> If overall score &lt;40% (or 'E'/'F' grade), registration in summer term or re-appear required.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Sample Course Credit Cards Explorer -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-slate-900 text-base">Popular Courses & Credit Schema Explorer</h3>
+          <span class="text-xs text-slate-500">Showing verified sample data for key curricula</span>
+        </div>
+
+        <div id="course-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 3: CAMPUS GPS & MAP -->
+    <section id="tab-map" class="tab-content hidden space-y-6">
+      
+      <!-- Map Header & Filter Bar -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-slate-900">LPU Campus Navigator GPS</h2>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">Live Geo-Explorer</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">Interactive OpenStreetMap centered on Lovely Professional University (Phagwara, Punjab). Click any marker for cabin & route details.</p>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button onclick="filterMapCategory('all')" class="map-filter-btn active px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white transition">All Locations</button>
+          <button onclick="filterMapCategory('academic')" class="map-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Academic Blocks</button>
+          <button onclick="filterMapCategory('services')" class="map-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">UniMall & Food</button>
+          <button onclick="filterMapCategory('hostels')" class="map-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Hostels</button>
+          <button onclick="filterMapCategory('sports')" class="map-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Gym & Sports</button>
+        </div>
+      </div>
+
+      <!-- Main Map Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Interactive Leaflet Map -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-3 overflow-hidden flex flex-col">
+          <div id="lpu-map" class="w-full h-[520px] rounded-xl border border-slate-200 relative z-0"></div>
+          <div class="mt-3 flex items-center justify-between text-[11px] text-slate-500 px-2">
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Academic</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span> UniMall/Commercial</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span> Hostels</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Sports</span>
+            </div>
+            <span>Lat: 31.2536° N, Lon: 75.7037° E</span>
+          </div>
+        </div>
+
+        <!-- Path & Quick Finder Side Panel -->
+        <div class="space-y-4">
+          
+          <!-- Route Direction Helper Card -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+              <i data-lucide="navigation-2" class="w-4 h-4 text-lpu-orange"></i>
+              Quick Route Finder
+            </h3>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-500">Starting From:</label>
+                <select id="route-start" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium mt-1">
+                  <option value="main-gate">Main Gate (NH-1 / GT Road)</option>
+                  <option value="block-34">Block 34 (Computer Science)</option>
+                  <option value="unimall">Block 55 (UniMall)</option>
+                  <option value="bh-4">Boys Hostel 4 (BH-4)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-slate-500">Destination Block:</label>
+                <select id="route-end" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium mt-1">
+                  <option value="central-lib">Central Library (Block 36/38)</option>
+                  <option value="block-32">Block 32 (Law & Sciences)</option>
+                  <option value="indoor-stadium">Indoor Sports Complex / Gym</option>
+                  <option value="hospital">Shanti Devi Mittal Hospital</option>
+                  <option value="unimall">UniMall (Block 55)</option>
+                </select>
+              </div>
+
+              <button onclick="calculateCampusRoute()" class="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-lpu-orange transition flex items-center justify-center gap-2">
+                <i data-lucide="footprints" class="w-4 h-4"></i> Get Step-by-Step Directions
+              </button>
+            </div>
+
+            <!-- Route Result Box -->
+            <div id="route-result-box" class="mt-4 p-3 rounded-xl bg-orange-50 border border-orange-200 text-xs text-slate-800 hidden">
+              <p class="font-bold text-orange-900" id="route-title">Path summary</p>
+              <p class="mt-1 text-slate-600 leading-relaxed" id="route-steps">Directions will appear here.</p>
+              <div class="mt-2 text-[11px] font-semibold text-orange-800 flex items-center gap-1" id="route-meta">
+                <i data-lucide="clock" class="w-3.5 h-3.5"></i> Estimated Walk: 6 mins (420m)
+              </div>
+            </div>
+          </div>
+
+          <!-- Key Campus Locations List -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm max-h-[290px] overflow-y-auto custom-scrollbar">
+            <h3 class="font-bold text-slate-800 text-sm mb-2">Popular Spots & Blocks</h3>
+            <div id="location-chips-list" class="space-y-2">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 4: UMS & RMS NAVIGATOR -->
+    <section id="tab-ums-rms" class="tab-content hidden space-y-6">
+      
+      <!-- Top Banner -->
+      <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-purple-400/20 text-purple-300 border border-purple-400/30">
+            Official Workflow Visualizer
+          </span>
+          <span class="text-xs text-purple-200">Relationship Management System</span>
+        </div>
+        <h2 class="text-2xl font-bold">UMS & RMS Ticket Resolution Guide</h2>
+        <p class="text-xs text-slate-300 max-w-2xl mt-1">
+          Never get confused by the hundreds of links inside University Management System (UMS). Follow this verified roadmap to lodge an RMS request or solve fee and attendance disputes.
+        </p>
+      </div>
+
+      <!-- RMS Step-by-Step Walkthrough Interactive -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Step-by-Step: How to Lodge an RMS Ticket</h3>
+            <p class="text-xs text-slate-500">Official procedure to get issues resolved within 24-48 hours</p>
+          </div>
+          <a href="https://ums.lpu.in" target="_blank" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 text-xs font-semibold flex items-center gap-1.5 transition">
+            <span>Open UMS Portal</span>
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          
+          <div class="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 flex flex-col justify-between">
+            <div>
+              <div class="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs mb-3">1</div>
+              <h4 class="font-bold text-slate-800 text-sm">Log in to UMS</h4>
+              <p class="text-xs text-slate-600 mt-1">Visit <code>ums.lpu.in</code> with your Registration ID and Password. Complete 2-factor OTP if prompted.</p>
+            </div>
+            <div class="mt-3 text-[11px] font-mono text-purple-700 bg-purple-100/50 p-1.5 rounded">Nav: Home Dashboard</div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 flex flex-col justify-between">
+            <div>
+              <div class="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs mb-3">2</div>
+              <h4 class="font-bold text-slate-800 text-sm">Locate RMS Menu</h4>
+              <p class="text-xs text-slate-600 mt-1">Open the Left Navigation Menu &gt; Click <strong>Relationship Management System (RMS)</strong> &gt; Select <strong>Lodge Request</strong>.</p>
+            </div>
+            <div class="mt-3 text-[11px] font-mono text-purple-700 bg-purple-100/50 p-1.5 rounded">Nav: RMS &gt; Lodge Request</div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 flex flex-col justify-between">
+            <div>
+              <div class="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs mb-3">3</div>
+              <h4 class="font-bold text-slate-800 text-sm">Select Right Category</h4>
+              <p class="text-xs text-slate-600 mt-1">Pick appropriate category (e.g., <em>Examination</em>, <em>Account & Fees</em>, <em>Hostel Services</em>, or <em>Academics</em>) to route directly to your HOD/Officer.</p>
+            </div>
+            <div class="mt-3 text-[11px] font-mono text-purple-700 bg-purple-100/50 p-1.5 rounded">Filter: Department Specific</div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 flex flex-col justify-between">
+            <div>
+              <div class="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs mb-3">4</div>
+              <h4 class="font-bold text-slate-800 text-sm">Attach Proof & Submit</h4>
+              <p class="text-xs text-slate-600 mt-1">Clearly describe problem, attach medical certificate or payment receipt screenshot if required, then note your <strong>Ticket ID</strong>.</p>
+            </div>
+            <div class="mt-3 text-[11px] font-mono text-purple-700 bg-purple-100/50 p-1.5 rounded">Turnaround: 24 to 48 Hours</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Common Scenarios & Instant Solutions -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i data-lucide="credit-card" class="w-4 h-4 text-orange-600"></i>
+            Fee Payment & Late Fine Issues
+          </h3>
+          <div class="space-y-2 text-xs text-slate-600">
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <strong class="text-slate-800">Fee Deducted but UMS shows Unpaid?</strong>
+              <p class="mt-0.5">Do not pay twice immediately. Bank gateways take up to 24-48 hours to reconcile. If status hasn't updated after 48h, raise an RMS under <em>Accounts &gt; Fee Reconciliation</em> with the bank UTR number and transaction receipt.</p>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <strong class="text-slate-800">Where to pay offline?</strong>
+              <p class="mt-0.5">Account cash counters are located in <strong>Block 30 & Block 32 Ground Floor</strong>. Accepted modes: Demand Draft (DD) or Debit/Credit swipe machine.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i data-lucide="user-x" class="w-4 h-4 text-orange-600"></i>
+            Attendance Discrepancy & Medical Leave
+          </h3>
+          <div class="space-y-2 text-xs text-slate-600">
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <strong class="text-slate-800">Attended class but marked Absent?</strong>
+              <p class="mt-0.5">Approach the respective course instructor within <strong>48 hours</strong> with proof of class participation or notes. Faculty can rectify attendance directly from their portal within 3 days.</p>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+              <strong class="text-slate-800">Medical Duty Leave submission:</strong>
+              <p class="mt-0.5">Get medical prescription attested by University Health Center (Shanti Devi Mittal Hospital on campus) first, then upload on UMS under <em>Duty Leave Request</em> within 5 days of returning.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 5: CAMPUS FACILITIES, UNIMALL & HOSTEL RULES -->
+    <section id="tab-facilities" class="tab-content hidden space-y-6">
+      
+      <!-- Facility Tabs Navigation inside this section -->
+      <div class="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+        <button onclick="switchFacilitySubTab('unimall')" id="subtab-btn-unimall" class="px-4 py-2 rounded-xl text-xs font-bold bg-orange-600 text-white transition">UniMall Directory (Block 55)</button>
+        <button onclick="switchFacilitySubTab('hostels')" id="subtab-btn-hostels" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Hostel & Out-Pass Rules</button>
+        <button onclick="switchFacilitySubTab('sports')" id="subtab-btn-sports" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Gym, Indoor Stadium & Food Courts</button>
+        <button onclick="switchFacilitySubTab('emergency')" id="subtab-btn-emergency" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">ATMs & Hospital Contacts</button>
+      </div>
+
+      <!-- SUBTAB: UNIMALL -->
+      <div id="subtab-unimall" class="facility-subtab space-y-4">
+        <div class="bg-gradient-to-r from-orange-500 to-amber-500 p-6 rounded-2xl text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded">Block 55</span>
+            <h3 class="text-2xl font-black mt-1">UniMall - Shopping, Food & Student Services</h3>
+            <p class="text-xs text-orange-100 mt-0.5">Everything you need inside LPU: Groceries, Electronics, Salon, Food Court & Tailoring.</p>
+          </div>
+          <div class="text-right bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+            <p class="text-[11px] font-medium text-orange-100">General Timings</p>
+            <p class="text-sm font-bold text-white">09:00 AM - 10:00 PM</p>
+            <p class="text-[10px] text-orange-200">(Food outlets open till 10:30 PM)</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="unimall-cards-container">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- SUBTAB: HOSTELS & LEAVE RULES -->
+      <div id="subtab-hostels" class="facility-subtab hidden space-y-4">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-slate-900 text-base">Hostel Out-Pass & Curfew Rules</h3>
+                <p class="text-xs text-slate-500">Guidelines for Boys Hostels (BH 1 to 8) and Girls Hostels (GH 1 to 6)</p>
+              </div>
+              <span class="text-xs font-bold px-2 py-1 bg-red-100 text-red-700 rounded-lg">Curfew Enforced</span>
+            </div>
+
+            <div class="space-y-3">
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-slate-800 text-xs">Daily Evening Campus In-Time (Curfew)</h4>
+                  <span class="text-xs font-mono font-bold text-orange-600">07:00 PM - 08:00 PM</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Hostel students must enter their allocated hostel premises before biometric punch-in cutoff. Turnstiles require Student ID RFID scan.</p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-slate-800 text-xs">Out-Pass Application (Home Leave)</h4>
+                  <span class="text-xs font-mono font-bold text-blue-600">UMS App &gt; Leave Request</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Apply at least 24 hours in advance. Registered parent phone receives automated IVR call or SMS for digital parental approval before gate security clearance.</p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-slate-800 text-xs">Late Entry Penalties</h4>
+                  <span class="text-xs font-mono font-bold text-red-600">Fine & Warning</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Late entries are registered on warden blotter. 3 late entries trigger parent notification letter and hostel security review.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 class="font-bold text-slate-900 text-sm mb-3">Hostel Mess Timings</h3>
+              <div class="space-y-2.5 text-xs text-slate-600">
+                <div class="flex justify-between pb-1.5 border-b border-slate-100">
+                  <span>Breakfast:</span>
+                  <span class="font-bold text-slate-800">07:30 AM - 09:30 AM</span>
+                </div>
+                <div class="flex justify-between pb-1.5 border-b border-slate-100">
+                  <span>Lunch:</span>
+                  <span class="font-bold text-slate-800">12:00 PM - 02:30 PM</span>
+                </div>
+                <div class="flex justify-between pb-1.5 border-b border-slate-100">
+                  <span>Evening Tea:</span>
+                  <span class="font-bold text-slate-800">05:00 PM - 06:15 PM</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Dinner:</span>
+                  <span class="font-bold text-slate-800">07:30 PM - 09:45 PM</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+              Special dietician menu served on Sundays. Night canteen open in BH-2 and GH-3 till 01:00 AM during examination weeks.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SUBTAB: SPORTS & GYM -->
+      <div id="subtab-sports" class="facility-subtab hidden space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
+              <i data-lucide="dumbbell" class="w-5 h-5"></i>
+            </div>
+            <h4 class="font-bold text-slate-800 text-sm">Indoor Gymnasium</h4>
+            <p class="text-xs text-slate-500 mt-1">Multi-station weight training, cardio zone, CrossFit center.</p>
+            <div class="mt-3 text-xs bg-slate-50 p-2 rounded-lg font-mono text-slate-700">
+              <div>Slots: 06:00 AM - 09:30 AM</div>
+              <div class="mt-1">Slots: 04:30 PM - 09:00 PM</div>
+              <div class="mt-1 text-emerald-600 font-bold">Location: Shanti Devi Stadium</div>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-3">
+              <i data-lucide="trophy" class="w-5 h-5"></i>
+            </div>
+            <h4 class="font-bold text-slate-800 text-sm">Indoor Stadium (Sports Complex)</h4>
+            <p class="text-xs text-slate-500 mt-1">Badminton wooden courts, squash, basketball, table tennis arena.</p>
+            <div class="mt-3 text-xs bg-slate-50 p-2 rounded-lg font-mono text-slate-700">
+              <div>Courts: 06:00 AM - 08:30 PM</div>
+              <div class="mt-1">Booking: Via UMS Sports Portal</div>
+              <div class="mt-1 text-blue-600 font-bold">Non-marking shoes mandatory</div>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center mb-3">
+              <i data-lucide="utensils" class="w-5 h-5"></i>
+            </div>
+            <h4 class="font-bold text-slate-800 text-sm">Central Food Courts & Kiosks</h4>
+            <p class="text-xs text-slate-500 mt-1">Dominos, Subway, Cafe Coffee Day, Nescafe hubs & regional messes.</p>
+            <div class="mt-3 text-xs bg-slate-50 p-2 rounded-lg font-mono text-slate-700">
+              <div>UniMall: 09:00 AM - 10:30 PM</div>
+              <div class="mt-1">Block 34 Hub: 08:00 AM - 08:00 PM</div>
+              <div class="mt-1 text-orange-600 font-bold">25+ Food points campus-wide</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB: ATMS & EMERGENCY -->
+      <div id="subtab-emergency" class="facility-subtab hidden space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+              <i data-lucide="landmark" class="w-4 h-4 text-emerald-600"></i>
+              Campus ATM Locations
+            </h4>
+            <ul class="text-xs text-slate-600 space-y-2">
+              <li class="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                <span><strong>SBI (State Bank of India):</strong> UniMall Entrance & Block 30 Ground Floor</span>
+                <span class="text-emerald-700 font-mono font-bold">24 Hours</span>
+              </li>
+              <li class="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                <span><strong>Punjab National Bank (PNB):</strong> Near Central Library & BH-4</span>
+                <span class="text-emerald-700 font-mono font-bold">24 Hours</span>
+              </li>
+              <li class="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                <span><strong>HDFC Bank:</strong> Inside UniMall Ground Floor (near elevator)</span>
+                <span class="text-emerald-700 font-mono font-bold">24 Hours</span>
+              </li>
+              <li class="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                <span><strong>ICICI Bank:</strong> Main Gate Boulevard (Block 1)</span>
+                <span class="text-emerald-700 font-mono font-bold">24 Hours</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+              <i data-lucide="heart-pulse" class="w-4 h-4 text-red-600"></i>
+              Hospital & Emergency Helplines
+            </h4>
+            <ul class="text-xs text-slate-600 space-y-2">
+              <li class="p-2 bg-red-50 rounded-lg flex items-center justify-between text-red-900">
+                <span><strong>Shanti Devi Mittal Hospital (On-Campus):</strong></span>
+                <span class="font-mono font-bold">+91-1824-517111</span>
+              </li>
+              <li class="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                <span><strong>Campus Ambulance 24x7:</strong></span>
+                <span class="font-mono font-bold text-red-600">Ext. 7111 / 7222</span>
+              </li>
+              <li class="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                <span><strong>Campus Security Control Room:</strong></span>
+                <span class="font-mono font-bold text-slate-800">+91-1824-517100</span>
+              </li>
+              <li class="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
+                <span><strong>Fire Safety & Emergency:</strong></span>
+                <span class="font-mono font-bold text-slate-800">+91-1824-517101</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 6: ADMIN PANEL -->
+    <section id="tab-admin" class="tab-content hidden space-y-6">
+      
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-bold text-slate-900">Prototype Knowledge Base & Directory Manager</h2>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">Admin Controls</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Manage mock campus locations, faculty cabins, and course schemas stored in active browser memory.</p>
+          </div>
+
+          <button onclick="resetPrototypeData()" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:text-red-600 hover:border-red-200 transition flex items-center gap-1.5">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset to Defaults
+          </button>
+        </div>
+
+        <!-- Add New Record Form -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+          <h3 class="font-bold text-slate-800 text-xs mb-3 flex items-center gap-1.5">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-lpu-orange"></i>
+            Add Quick Knowledge / Block Entry
+          </h3>
+          <form onsubmit="handleAdminAddRecord(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label class="text-[10px] font-bold text-slate-500 uppercase">Entity Name</label>
+              <input type="text" id="admin-name" required placeholder="e.g., Block 56 (New Lab)" class="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 mt-1 focus:outline-none focus:ring-1 focus:ring-orange-500">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-slate-500 uppercase">Category</label>
+              <select id="admin-category" class="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 mt-1 focus:outline-none focus:ring-1 focus:ring-orange-500">
+                <option value="academic">Academic Block</option>
+                <option value="services">UniMall / Food</option>
+                <option value="hostels">Hostel</option>
+                <option value="sports">Sports / Gym</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-slate-500 uppercase">Key Details / Timings</label>
+              <input type="text" id="admin-desc" required placeholder="e.g., Cabin 201-205, Timings: 9am-6pm" class="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 mt-1 focus:outline-none focus:ring-1 focus:ring-orange-500">
+            </div>
+            <div class="flex items-end">
+              <button type="submit" class="w-full py-2 bg-lpu-orange text-white text-xs font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-1.5">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Entry
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Current Records Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-100 text-slate-800 uppercase font-semibold text-[10px]">
+              <tr>
+                <th class="p-3 rounded-l-lg">ID / Code</th>
+                <th class="p-3">Name / Facility</th>
+                <th class="p-3">Category</th>
+                <th class="p-3">Description & Cabins</th>
+                <th class="p-3">Data Status</th>
+                <th class="p-3 rounded-r-lg text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-table-body" class="divide-y divide-slate-100">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= AI ASSISTANT SIDE DRAWER / CHATBOT ================= -->
+  <div id="ai-chat-drawer" class="fixed inset-y-0 right-0 w-full sm:w-[460px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200">
+    
+    <!-- Drawer Header -->
+    <div class="p-4 bg-gradient-to-r from-slate-900 to-lpu-navy text-white flex items-center justify-between border-b border-orange-500/40">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-lpu-orange to-amber-500 flex items-center justify-center text-white shadow">
+          <i data-lucide="bot" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h3 class="font-bold text-sm tracking-tight">UniGuide LPU Assistant</h3>
+            <span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Dual AI</span>
+          </div>
+          <p class="text-[10px] text-slate-300">Offline Campus Engine + Live Gemini Mode</p>
+        </div>
+      </div>
+      <button onclick="toggleChatDrawer(false)" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Gemini API Key Accordion / Mode Switcher -->
+    <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-200 text-xs">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span class="font-medium text-slate-700 text-[11px]" id="ai-mode-status-text">Mode: Local LPU Knowledge Base (Free)</span>
+        </div>
+        <button onclick="toggleApiKeyInput()" class="text-[10px] font-bold text-lpu-orange hover:underline">
+          API Key Setup
+        </button>
+      </div>
+
+      <div id="api-key-container" class="hidden mt-2 pt-2 border-t border-slate-200 space-y-1.5">
+        <p class="text-[10px] text-slate-500">Optional: Paste your Google Gemini API Key for deep reasoning responses. Leave empty to use built-in offline campus engine.</p>
+        <div class="flex items-center gap-2">
+          <input type="password" id="gemini-api-key" placeholder="AIzaSy..." class="flex-1 text-[11px] bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono">
+          <button onclick="saveApiKey()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-bold hover:bg-slate-800 transition">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Messages Scroll Container -->
+    <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-slate-50">
+      
+      <!-- Bot Welcome Message -->
+      <div class="flex items-start gap-2.5">
+        <div class="w-7 h-7 rounded-lg bg-lpu-orange text-white flex items-center justify-center flex-shrink-0 text-xs">
+          <i data-lucide="bot" class="w-4 h-4"></i>
+        </div>
+        <div class="max-w-[85%] bg-white p-3 rounded-2xl rounded-tl-sm border border-slate-200 shadow-sm text-xs text-slate-700 space-y-1.5">
+          <p class="font-bold text-slate-900">Sat Sri Akal / Hello! I am your LPU Smart Campus AI.</p>
+          <p>I can instantly guide you with:</p>
+          <ul class="list-disc list-inside space-y-0.5 text-slate-600">
+            <li>Continuous Assessment (CA) rules & Best 3 of 4</li>
+            <li>Subject credits (CSE101, ECE205, MEC103...)</li>
+            <li>MTE & ETE pattern & weightage</li>
+            <li>Directions to Block 32, 34, 38, UniMall (55)</li>
+            <li>Hostel Out-pass and Curfew timings</li>
+            <li>RMS (Relationship Management) filing guide</li>
+            <li>ATM and hospital locations</li>
+          </ul>
+          <span class="inline-block text-[9px] text-slate-400 mt-1">Verified LPU Campus Database</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Quick Prompt Suggestions Chips -->
+    <div class="px-3 py-2 bg-white border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto custom-scrollbar whitespace-nowrap">
+      <button onclick="askBotDirect('How are CAs calculated?')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-orange-50 text-[10px] font-medium text-slate-700 hover:text-orange-600 border border-slate-200 transition">
+        CA Calculation
+      </button>
+      <button onclick="askBotDirect('Where is Block 34 from Main Gate?')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-orange-50 text-[10px] font-medium text-slate-700 hover:text-orange-600 border border-slate-200 transition">
+        Block 34 Path
+      </button>
+      <button onclick="askBotDirect('How to raise an RMS in UMS?')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-orange-50 text-[10px] font-medium text-slate-700 hover:text-orange-600 border border-slate-200 transition">
+        Lodge RMS
+      </button>
+      <button onclick="askBotDirect('Hostel in-time and leave rules')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-orange-50 text-[10px] font-medium text-slate-700 hover:text-orange-600 border border-slate-200 transition">
+        Hostel Curfew
+      </button>
+      <button onclick="askBotDirect('Where is UniMall and what shops are there?')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-orange-50 text-[10px] font-medium text-slate-700 hover:text-orange-600 border border-slate-200 transition">
+        UniMall Shops
+      </button>
+    </div>
+
+    <!-- Chat Input Area -->
+    <div class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+      <input type="text" id="ai-chat-input" onkeydown="if(event.key==='Enter') sendChatMessage()" placeholder="Type campus query or problem..." class="flex-1 text-xs bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500 font-normal text-slate-800">
+      <button onclick="sendChatMessage()" class="p-2.5 rounded-xl bg-lpu-orange text-white hover:bg-orange-600 transition flex items-center justify-center shadow">
+        <i data-lucide="send" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Chat Drawer Overlay Backdrop -->
+  <div id="ai-chat-backdrop" onclick="toggleChatDrawer(false)" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity"></div>
+
+  <!-- ================= CUSTOM LOGIN MODAL ================= -->
+  <div id="login-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 relative">
+      <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-2.5 mb-2">
+        <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold">
+          <i data-lucide="lock" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Campus Persona Login</h3>
+          <p class="text-xs text-slate-500">Lovely Professional University Single Sign-On</p>
+        </div>
+      </div>
+
+      <form onsubmit="handleCustomLogin(event)" class="mt-4 space-y-3.5">
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Select Role</label>
+          <select id="modal-role-select" class="mt-1 w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium">
+            <option value="student">Student (B.Tech / MBA / Law / etc.)</option>
+            <option value="faculty">Faculty / Instructor</option>
+            <option value="admin">University Administrator</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Registration / Employee ID</label>
+          <input type="text" id="modal-reg-id" required placeholder="e.g. 12104589" value="12104589" class="mt-1 w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-700">Password / Access PIN</label>
+          <input type="password" required value="••••••••" class="mt-1 w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-lpu-orange text-white text-xs font-bold hover:bg-orange-600 transition shadow">
+          Sign In to UniGuide Prototype
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="mt-auto bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-800">UniGuide LPU</span>
+        <span>• Prototype built for LPU Student AI Innovation Challenge</span>
+      </div>
+      <div class="flex items-center gap-4 text-[11px]">
+        <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">[Verified Public Info]</span>
+        <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold border border-amber-200">[Sample Simulation Data]</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
+  <script>
+    /* =======================================================================
+       1. DATA STORE: Public LPU Information & Verified Campus Knowledge
+       ======================================================================= */
+    const campusState = {
+      currentUser: {
+        role: 'student',
+        name: 'Aarav Sharma',
+        regId: '12104589',
+        dept: 'Computer Science & Engineering',
+        hostel: 'BH-4 (Room 312)'
+      },
+      geminiApiKey: localStorage.getItem('lpu_gemini_key') || '',
+      courses: [
+        {
+          code: 'CSE101',
+          name: 'Computer Programming (C / Python)',
+          credits: 4,
+          dept: 'CSE',
+          mteWeight: '20%',
+          eteWeight: '50%',
+          caWeight: '30%',
+          caStructure: 'Best 3 out of 4: (CA1: HackerRank task, CA2: MCQ, CA3: Coding Project, CA4: Viva)',
+          verified: true
+        },
+        {
+          code: 'CSE205',
+          name: 'Data Structures & Algorithms',
+          credits: 4,
+          dept: 'CSE',
+          mteWeight: '25%',
+          eteWeight: '45%',
+          caWeight: '30%',
+          caStructure: 'Best 3 out of 4: (CA1: Tree/Graph lab, CA2: Online test, CA3: Case study, CA4: Hackathon)',
+          verified: true
+        },
+        {
+          code: 'ECE205',
+          name: 'Digital Electronics & Logic Design',
+          credits: 3,
+          dept: 'ECE',
+          mteWeight: '20%',
+          eteWeight: '50%',
+          caWeight: '30%',
+          caStructure: 'Best 3 out of 4: (CA1: Breadboard simulation, CA2: Written quiz, CA3: VHDL design, CA4: Oral)',
+          verified: true
+        },
+        {
+          code: 'MEC103',
+          name: 'Engineering Graphics & CAD Modeling',
+          credits: 3,
+          dept: 'MEC',
+          mteWeight: '20%',
+          eteWeight: '40%',
+          caWeight: '40%',
+          caStructure: 'AutoCAD design submissions (4 portfolio sheets, highest 3 scores aggregated)',
+          verified: true
+        },
+        {
+          code: 'MGT151',
+          name: 'Organizational Behavior & Human Dynamics',
+          credits: 3,
+          dept: 'MGT',
+          mteWeight: '25%',
+          eteWeight: '50%',
+          caWeight: '25%',
+          caStructure: 'Best 3 of 4: (Group Case study, Class presentation, Written MCQ, Role-play analysis)',
+          verified: true
+        },
+        {
+          code: 'MTH166',
+          name: 'Discrete Mathematics & Optimization',
+          credits: 4,
+          dept: 'CSE',
+          mteWeight: '25%',
+          eteWeight: '50%',
+          caWeight: '25%',
+          caStructure: 'Best 3 of 4: (Assignments, 2 In-Class Tests, Proof Writing Portfolio)',
+          verified: true
+        }
+      ],
+      locations: [
+        {
+          id: 'b34',
+          name: 'Block 34 (Computer Science & Engg)',
+          category: 'academic',
+          lat: 31.2536,
+          lng: 75.7037,
+          desc: 'School of CSE, AI & IoT labs, Dean cabin (Room 101), Faculty Cabins 34-401 to 34-430.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'b32',
+          name: 'Block 32 (Law, Agriculture & Sciences)',
+          category: 'academic',
+          lat: 31.2522,
+          lng: 75.7025,
+          desc: 'School of Law, Moot Court, Account Fee Counter (Ground floor), Faculty cabins.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'b38',
+          name: 'Block 38 & Central Library',
+          category: 'academic',
+          lat: 31.2550,
+          lng: 75.7045,
+          desc: '4-story Central Library, Digital reading rooms, Reference sections, silent study pods.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'unimall',
+          name: 'UniMall (Block 55)',
+          category: 'services',
+          lat: 31.2545,
+          lng: 75.7015,
+          desc: 'Multi-level commercial mall, superstore, salon, apparel shops, stationery, food court.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'bh4',
+          name: 'Boys Hostel 4 (BH-4)',
+          category: 'hostels',
+          lat: 31.2568,
+          lng: 75.7058,
+          desc: 'Residential block for senior students, mess attached, laundry kiosks, night reading room.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'gh2',
+          name: 'Girls Hostel 2 (GH-2)',
+          category: 'hostels',
+          lat: 31.2515,
+          lng: 75.7065,
+          desc: 'Residential block, 24/7 security turnstile, in-house canteen, recreational hall.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'stadium',
+          name: 'Shanti Devi Mittal Indoor Stadium',
+          category: 'sports',
+          lat: 31.2575,
+          lng: 75.7020,
+          desc: 'Badminton courts, Olympic size gym, swimming pool, basketball courts, squash arena.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'hospital',
+          name: 'Shanti Devi Mittal Hospital',
+          category: 'services',
+          lat: 31.2505,
+          lng: 75.7010,
+          desc: '24/7 Emergency trauma center, pharmacy, duty doctors, ambulance staging area.',
+          typeTag: 'Verified LPU Info'
+        },
+        {
+          id: 'maingate',
+          name: 'LPU Main Gate (NH-1 Boulevard)',
+          category: 'services',
+          lat: 31.2485,
+          lng: 75.7001,
+          desc: 'University main entrance, visitor registration, auto-rickshaw bay, ICICI bank ATM.',
+          typeTag: 'Verified LPU Info'
+        }
+      ],
+      unimallShops: [
+        {
+          name: 'UniStore Supermarket',
+          floor: 'Lower Ground (LG)',
+          category: 'Daily Essentials & Groceries',
+          timings: '09:00 AM - 10:00 PM',
+          desc: 'Groceries, packed foods, toiletries, packaged water, snacks, dairy products.'
+        },
+        {
+          name: 'Apple / Gadget Zone & Tech Repairs',
+          floor: 'Ground Floor (GF)',
+          category: 'Electronics & Repairs',
+          timings: '10:00 AM - 09:30 PM',
+          desc: 'Laptop accessories, mobile screen repairs, charging cables, headphones, USB drives.'
+        },
+        {
+          name: 'Looks Unisex Salon & Grooming',
+          floor: '1st Floor',
+          category: 'Personal Care',
+          timings: '09:30 AM - 09:00 PM',
+          desc: 'Haircut, beard trim, styling, facial services for both men and women.'
+        },
+        {
+          name: 'Campus Food Plaza (Dominos, Subway, Chaayos)',
+          floor: '2nd Floor (Food Court)',
+          category: 'Dining & Cafes',
+          timings: '10:00 AM - 10:30 PM',
+          desc: 'Pizzas, subs, hot Indian meals, dosa corner, momos, bubble tea and cold brew.'
+        },
+        {
+          name: 'Student Print & Stationery Hub',
+          floor: 'Lower Ground (LG-12)',
+          category: 'Academics Support',
+          timings: '08:30 AM - 09:30 PM',
+          desc: 'Color printouts, project spiral binding, lab files, stationary, graphing sheets.'
+        },
+        {
+          name: 'Raymond & Campus Uniform Tailoring',
+          floor: '1st Floor (Shop 104)',
+          category: 'Apparel & Uniforms',
+          timings: '10:00 AM - 08:30 PM',
+          desc: 'Hotel management, MBA formal blazer tailoring, laboratory lab coats.'
+        },
+        {
+          name: 'Bookstore & Novel Haven',
+          floor: 'Ground Floor',
+          category: 'Books',
+          timings: '09:30 AM - 09:00 PM',
+          desc: 'Engineering textbooks, GATE/CAT prep guides, international bestsellers, journals.'
+        },
+        {
+          name: 'Pharmacy & Wellness Store',
+          floor: 'Ground Floor (Entry A)',
+          category: 'Healthcare',
+          timings: '08:30 AM - 10:30 PM',
+          desc: 'Prescription medicines, first aid, protein supplements, vitamins, band-aids.'
+        }
+      ]
+    };
+
+    /* =======================================================================
+       2. INITIALIZATION & LIFECYCLE
+       ======================================================================= */
+    let mapInstance = null;
+    let mapMarkers = [];
+
+    window.onload = function() {
+      lucide.createIcons();
+      renderCourses();
+      renderAdminTable();
+      renderUnimallShops();
+      renderLocationChips();
+      initMap();
+      
+      if (campusState.geminiApiKey) {
+        document.getElementById('gemini-api-key').value = campusState.geminiApiKey;
+        document.getElementById('ai-mode-status-text').innerText = 'Mode: Live Gemini AI Connected';
+      }
+    };
+
+    /* =======================================================================
+       3. NAVIGATION & TAB SWITCHING
+       ======================================================================= */
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      const activeTab = document.getElementById(`tab-${tabId}`);
+      if (activeTab) activeTab.classList.remove('hidden');
+
+      // Update nav button styles
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-lpu-orange', 'shadow-sm');
+        btn.classList.add('text-slate-700');
+      });
+      const activeNavBtn = document.getElementById(`nav-${tabId}`);
+      if (activeNavBtn) {
+        activeNavBtn.classList.add('bg-white', 'text-lpu-orange', 'shadow-sm');
+        activeNavBtn.classList.remove('text-slate-700');
+      }
+
+      // If switching to Map, force map invalidation so tiles render cleanly
+      if (tabId === 'map' && mapInstance) {
+        setTimeout(() => {
+          mapInstance.invalidateSize();
+        }, 200);
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleMobileNav() {
+      const menu = document.getElementById('mobile-nav-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    function switchFacilitySubTab(subId) {
+      document.querySelectorAll('.facility-subtab').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(`subtab-${subId}`);
+      if (target) target.classList.remove('hidden');
+
+      const tabs = ['unimall', 'hostels', 'sports', 'emergency'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`subtab-btn-${t}`);
+        if (t === subId) {
+          btn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-orange-600 text-white transition';
+        } else {
+          btn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+        }
+      });
+    }
+
+    /* =======================================================================
+       4. AUTHENTICATION & ROLE SWITCHING
+       ======================================================================= */
+    function toggleUserDropdown() {
+      const dd = document.getElementById('user-dropdown-menu');
+      dd.classList.toggle('hidden');
+    }
+
+    // Close dropdown on click outside
+    document.addEventListener('click', function(e) {
+      const badge = document.getElementById('user-badge');
+      const menu = document.getElementById('user-dropdown-menu');
